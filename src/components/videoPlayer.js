@@ -1,147 +1,178 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../videoPlayer.css'
-function VideoPlayer(){
-    const [isScrubbing, setScrubbing] = useState(false);
-    const [wasPaused, setWasPaused] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [totalTime, setTotalTime] = useState(0);
-    const [volume, setVolume] = useState(1);
-    const [isMuted, setMuted] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1);
-    const [isPaused, setIsPaused] = useState(true);
-    const [theaterMode, settheaterMode]=useState(false);
-    const [fullScreen, setFullScreen] = useState(false);
-    const [miniPlayer, setminiPlayer] = useState(false);
-    const videoContainerRef = useRef(null);
-    const videoRef = useRef(null);
-    const volumeSliderRef= useRef(null);
+function VideoPlayer() {
+  const [isScrubbing, setScrubbing] = useState(false);
+  const [wasPaused, setWasPaused] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isPaused, setIsPaused] = useState(true);
+  const [theaterMode, settheaterMode] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
+  const [miniPlayer, setminiPlayer] = useState(false);
+  const [percent, setPercent] = useState(0);
+  const videoContainerRef = useRef(null);
+  const videoRef = useRef(null);
+  const volumeSliderRef = useRef(null);
 
-    const toggleFullScreenMode=()=>{
-        if (!document.fullscreenElement) {
-            videoContainerRef.current.requestFullscreen()
-              .then(() => setFullScreen(true))
-              .catch((error) => console.error('Error attempting to enable fullscreen:', error));
-          } else {
-            document.exitFullscreen()
-              .then(() => setFullScreen(false))
-              .catch((error) => console.error('Error attempting to exit fullscreen:', error));
-          }
+  const toggleFullScreenMode = () => {
+    if (!document.fullscreenElement) {
+      videoContainerRef.current.requestFullscreen()
+        .then(() => setFullScreen(true))
+        .catch((error) => console.error('Error attempting to enable fullscreen:', error));
+    } else {
+      document.exitFullscreen()
+        .then(() => setFullScreen(false))
+        .catch((error) => console.error('Error attempting to exit fullscreen:', error));
     }
-    const toggleMiniPlayerMode = ()=>{
-      if (videoContainerRef.current.classList.contains("mini-player")) {
-        document.exitPictureInPicture();
-        setminiPlayer(false)
-        videoContainerRef.current.classList.remove("mini-player")
-      } else {
-        videoRef.current.requestPictureInPicture()
-        setminiPlayer(true)
-        videoContainerRef.current.classList.add("mini-player")
-      }
   }
-    const togglePlay = () => {
-      console.log(videoRef)
-    const video = videoRef.current;
-    if(video.paused){
-      video.play() ;
-      setIsPaused(false)
+  const toggleMiniPlayerMode = () => {
+    if (videoContainerRef.current.classList.contains("mini-player")) {
+      document.exitPictureInPicture();
+      setminiPlayer(false)
+      videoContainerRef.current.classList.remove("mini-player")
+    } else {
+      videoRef.current.requestPictureInPicture()
+      setminiPlayer(true)
+      videoContainerRef.current.classList.add("mini-player")
     }
-    else{
+  }
+  const togglePlay = () => {
+    console.log(videoRef)
+    const video = videoRef.current;
+    if (video.paused) {
+      video.play();
+      setIsPaused(false)
+      video.addEventListener("play", () => {
+        videoContainerRef.current.classList.remove("paused")
+      })
+    }
+    else {
       video.pause()
-      setIsPaused(true);
+      setIsPaused(true);   
+      video.addEventListener("pause", () => {
+        videoContainerRef.current.classList.add("paused")
+      })
     }
   };
-  const toggleTheaterMode=()=> {
+  const toggleTheaterMode = () => {
     settheaterMode((prevTheaterMode) => !prevTheaterMode);
-}
-const volumeInput=(e)=> {
+  }
+  const volumeInput = (e) => {
     const newVolume = e.target.value;
     videoRef.current.volume = newVolume;
     videoRef.current.muted = newVolume === "0";
     setVolume(newVolume);
     // volumeSliderRef.current.value = volume
-}
-const toggleMute = ()=> {
+  }
+  const toggleMute = () => {
     // setVolume(0)
     videoRef.current.muted = !videoRef.current.muted;
     console.log(volumeSliderRef.current.value)
-    if(videoRef.current.muted){
-        setVolume(0)
+    if (videoRef.current.muted) {
+      setVolume(0)
     }
   }
- 
-    useEffect(() => {
-        videoRef.current.addEventListener("volumechange", () => {
-            volumeSliderRef.current.value = videoRef.current.volume
-            let volumeLevel
-            if (videoRef.current.muted || volume === 0) {
-                volumeSliderRef.current.value = 0;
-              volumeLevel = "muted"
-            } else if (videoRef.current.volume >= 0.5) {
-              volumeLevel = "high"
-              setVolume(videoRef.current.volume)
-            }else if(videoRef.current.volume===0){
-                volumeLevel = "muted"
-            }
-             else {
-              volumeLevel = "low"
-            }
-            videoContainerRef.current.dataset.volumeLevel = volumeLevel
-          })
-        const handleKeyDown = (e) => {
-          const tagName = e.target.tagName.toLowerCase();
-          const key = e.key.toLowerCase();
-    
-          if (tagName === 'input') return;
-    
-          switch (key) {
-            case ' ':
-            case 'k':
-              togglePlay();
-              break;
-            case 'f':
-              toggleFullScreenMode()
-              break;
-            case 't':
-              toggleTheaterMode();
-              break;
-            case 'i':
-              toggleMiniPlayerMode();
-              break;
-            case 'm':
-              toggleMute();
-              break;
-            case 'arrowleft':
-            case 'j':
-              // skip(-5);
-              break;
-            case 'arrowright':
-            case 'l':
-              // skip(5);
-              break;
-            case 'c':
-              // toggleCaptions();
-              break;
-            default:
-              break;
-          }
-        };
-    
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-          document.removeEventListener('keydown', handleKeyDown);
-        };
-      }, []);
-    return(
-        <div ref={videoContainerRef} className={`video-container paused ${theaterMode ? 'theater' : ''}`} data-volume-level="high">
-      <img className="thumbnail-img"/>
+  const TimeUpdate= () => {
+    setCurrentTime(formatDuration(videoRef.current.currentTime))
+    const percentage = videoRef.current.currentTime / videoRef.current.duration
+    setPercent(percentage)
+  }
+  const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
+    minimumIntegerDigits: 2,
+  })
+  function formatDuration(time) {
+    const seconds = Math.floor(time % 60)
+    const minutes = Math.floor(time / 60) % 60
+    const hours = Math.floor(time / 3600)
+    if (hours === 0) {
+      return `${minutes}:${leadingZeroFormatter.format(seconds)}`
+    } else {
+      return `${hours}:${leadingZeroFormatter.format(
+        minutes
+      )}:${leadingZeroFormatter.format(seconds)}`
+    }
+  }
+  useEffect(() => {
+    videoRef.current.addEventListener("volumechange", () => {
+      volumeSliderRef.current.value = videoRef.current.volume
+      let volumeLevel
+      if (videoRef.current.muted || volume === 0) {
+        volumeSliderRef.current.value = 0;
+        volumeLevel = "muted"
+      } else if (videoRef.current.volume >= 0.5) {
+        volumeLevel = "high"
+        setVolume(videoRef.current.volume)
+      } else if (videoRef.current.volume === 0) {
+        volumeLevel = "muted"
+      }
+      else {
+        volumeLevel = "low"
+      }
+      videoContainerRef.current.dataset.volumeLevel = volumeLevel
+    })
+
+    videoRef.current.addEventListener("timeupdate", TimeUpdate)
+    videoRef.current.addEventListener("loadeddata", () => {
+      setTotalTime(formatDuration(videoRef.current.duration))
+    })
+    const handleKeyDown = (e) => {
+      const tagName = e.target.tagName.toLowerCase();
+      const key = e.key.toLowerCase();
+
+      if (tagName === 'input') return;
+
+      switch (key) {
+        case ' ':
+        case 'k':
+          togglePlay();
+          break;
+        case 'f':
+          toggleFullScreenMode()
+          break;
+        case 't':
+          toggleTheaterMode();
+          break;
+        case 'i':
+          toggleMiniPlayerMode();
+          break;
+        case 'm':
+          toggleMute();
+          break;
+        case 'arrowleft':
+        case 'j':
+          // skip(-5);
+          break;
+        case 'arrowright':
+        case 'l':
+          // skip(5);
+          break;
+        case 'c':
+          // toggleCaptions();
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+  return (
+    <div ref={videoContainerRef} className={`video-container paused ${theaterMode ? 'theater' : ''}`} data-volume-level="high">
+      <img className="thumbnail-img" />
       <div className="video-controls-container">
-        <div  className="timeline-container">
+        <div className="timeline-container" style={{ "--progress-position": percent }}>
           <div className="timeline">
             <div className="thumb-indicator"></div>
           </div>
         </div>
         <div className="controls">
-          <button className="play-pause-btn">
+          <button className="play-pause-btn" onClick={togglePlay}>
             <svg className="play-icon" viewBox="0 0 24 24">
               <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
             </svg>
@@ -164,9 +195,9 @@ const toggleMute = ()=> {
             <input ref={volumeSliderRef} onChange={volumeInput} className="volume-slider" type="range" min="0" max="1" step="any" />
           </div>
           <div className="duration-container">
-            <div className="current-time">0:00</div>
+            <div className="current-time">{currentTime ? currentTime: '0:00'}</div>
             /
-            <div className="total-time"></div>
+            <div className="total-time">{totalTime ? totalTime : '0:00'}</div>
           </div>
           <button className="captions-btn">
             <svg viewBox="0 0 24 24">
@@ -178,33 +209,33 @@ const toggleMute = ()=> {
           </button>
           <button className="mini-player-btn" onClick={toggleMiniPlayerMode}>
             <svg viewBox="0 0 24 24">
-              <path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"/>
+              <path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z" />
             </svg>
           </button>
           <button className="theater-btn" onClick={toggleTheaterMode}>
             <svg className="tall" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"/>
+              <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z" />
             </svg>
             <svg className="wide" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"/>
+              <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z" />
             </svg>
           </button>
           <button className="full-screen-btn" onClick={toggleFullScreenMode}>
             <svg className="open" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+              <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
             </svg>
             <svg className="close" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+              <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
             </svg>
           </button>
         </div>
       </div>
-      <video ref={videoRef} src="https://millisinaq.az/Content/video/video.mp4">
+      <video ref={videoRef} src="https://millisinaq.az/Content/video/video.mp4" onClick={togglePlay}>
       </video>
       <svg className="loader" viewBox="25 25 50 50">
         <circle r="20" cy="50" cx="50"></circle>
       </svg>
     </div>
-    )
+  )
 }
 export default VideoPlayer;
