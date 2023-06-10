@@ -47,7 +47,6 @@ function VideoPlayer() {
 
   //Play
   const togglePlay = () => {
-    console.log(videoRef)
     const video = videoRef.current;
     if (video.paused) {
       video.play();
@@ -81,9 +80,7 @@ function VideoPlayer() {
 
   //Mute
   const toggleMute = () => {
-    // setVolume(0)
     videoRef.current.muted = !videoRef.current.muted;
-    console.log(volumeSliderRef.current.value)
     if (videoRef.current.muted) {
       setVolume(0)
     }
@@ -138,7 +135,6 @@ function VideoPlayer() {
 
   let isScrubbing = false
   const toggleScrubbing = (e) => {
-    console.log(e)
     const rect = timelineContainerRef.current.getBoundingClientRect();
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
     setPercent(percent);
