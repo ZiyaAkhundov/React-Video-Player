@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../videoPlayer.css'
 function VideoPlayer() {
-  const [isScrubbing, setScrubbing] = useState(false);
+  // const [isScrubbing, setisScrubbing] = useState(false);
   const [wasPaused, setWasPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setMuted] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState('');
   const [isPaused, setIsPaused] = useState(true);
   const [theaterMode, settheaterMode] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
@@ -16,7 +16,10 @@ function VideoPlayer() {
   const videoContainerRef = useRef(null);
   const videoRef = useRef(null);
   const volumeSliderRef = useRef(null);
+  const loaderRef = useRef(null);
+  const timelineContainerRef = useRef(null);
 
+  //Fullscreen
   const toggleFullScreenMode = () => {
     if (!document.fullscreenElement) {
       videoContainerRef.current.requestFullscreen()
@@ -28,6 +31,8 @@ function VideoPlayer() {
         .catch((error) => console.error('Error attempting to exit fullscreen:', error));
     }
   }
+
+  //MiniPlayer
   const toggleMiniPlayerMode = () => {
     if (videoContainerRef.current.classList.contains("mini-player")) {
       document.exitPictureInPicture();
@@ -39,6 +44,8 @@ function VideoPlayer() {
       videoContainerRef.current.classList.add("mini-player")
     }
   }
+
+  //Play
   const togglePlay = () => {
     console.log(videoRef)
     const video = videoRef.current;
@@ -51,15 +58,19 @@ function VideoPlayer() {
     }
     else {
       video.pause()
-      setIsPaused(true);   
+      setIsPaused(true);
       video.addEventListener("pause", () => {
         videoContainerRef.current.classList.add("paused")
       })
     }
   };
+
+  //Theater Mode
   const toggleTheaterMode = () => {
     settheaterMode((prevTheaterMode) => !prevTheaterMode);
   }
+
+  //Volume
   const volumeInput = (e) => {
     const newVolume = e.target.value;
     videoRef.current.volume = newVolume;
@@ -67,6 +78,8 @@ function VideoPlayer() {
     setVolume(newVolume);
     // volumeSliderRef.current.value = volume
   }
+
+  //Mute
   const toggleMute = () => {
     // setVolume(0)
     videoRef.current.muted = !videoRef.current.muted;
@@ -75,7 +88,9 @@ function VideoPlayer() {
       setVolume(0)
     }
   }
-  const TimeUpdate= () => {
+
+  //Time
+  const TimeUpdate = () => {
     setCurrentTime(formatDuration(videoRef.current.currentTime))
     const percentage = videoRef.current.currentTime / videoRef.current.duration
     setPercent(percentage)
@@ -94,6 +109,57 @@ function VideoPlayer() {
         minutes
       )}:${leadingZeroFormatter.format(seconds)}`
     }
+  }
+  // Speed
+  const changePlaybackSpeed = () => {
+    let newPlaybackRate = videoRef.current.playbackRate + 0.25
+    if (newPlaybackRate > 2) newPlaybackRate = 0.25
+    videoRef.current.playbackRate = newPlaybackRate
+    setPlaybackSpeed(`${newPlaybackRate}x`)
+  }
+  //loader
+  function showLoader() {
+    loaderRef.current.style.display = 'block';
+  }
+  function hideLoader() {
+    loaderRef.current.style.display = 'none';
+  }
+  //TimeLine moving
+  const handleTimelineUpdate = (e) => {
+    const rect = timelineContainerRef.current.getBoundingClientRect();
+    const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
+    timelineContainerRef.current.style.setProperty("--preview-position", percent);
+
+    if (isScrubbing) {
+      e.preventDefault();
+      timelineContainerRef.current.style.setProperty("--progress-position", percent);
+    }
+  };
+
+  let isScrubbing = false
+  const toggleScrubbing = (e) => {
+    console.log(e)
+    const rect = timelineContainerRef.current.getBoundingClientRect();
+    const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
+    setPercent(percent);
+    const btn = (e.buttons & 1) === 1;
+    isScrubbing=btn;
+    
+    videoContainerRef.current.classList.toggle("scrubbing", isScrubbing);
+    if (isScrubbing) {
+      setWasPaused(videoRef.current.paused);
+      videoRef.current.pause();
+    } else {
+      let value=(percent * videoRef.current.duration).toFixed(2)
+      videoRef.current.currentTime = value;
+      if (!wasPaused) videoRef.current.play();
+    }
+
+    handleTimelineUpdate(e);
+  };
+  // Skip
+  const skip = (duration)=> {
+    videoRef.current.currentTime += duration
   }
   useEffect(() => {
     videoRef.current.addEventListener("volumechange", () => {
@@ -118,6 +184,27 @@ function VideoPlayer() {
     videoRef.current.addEventListener("loadeddata", () => {
       setTotalTime(formatDuration(videoRef.current.duration))
     })
+    //timeLine
+    timelineContainerRef.current.addEventListener("mousemove", handleTimelineUpdate);
+    timelineContainerRef.current.addEventListener("mousedown", toggleScrubbing);
+    document.addEventListener("mouseup", (e) => {
+      if (isScrubbing) toggleScrubbing(e);
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (isScrubbing) handleTimelineUpdate(e);
+    });
+    //loader
+    videoRef.current.addEventListener('waiting', showLoader);
+    videoRef.current.addEventListener('canplay', hideLoader);
+    videoRef.current.addEventListener('progress', function () {
+      if (videoRef.current.readyState < 4) {
+        showLoader();
+      } else {
+        hideLoader();
+      }
+    });
+
+
     const handleKeyDown = (e) => {
       const tagName = e.target.tagName.toLowerCase();
       const key = e.key.toLowerCase();
@@ -143,11 +230,11 @@ function VideoPlayer() {
           break;
         case 'arrowleft':
         case 'j':
-          // skip(-5);
+          skip(-5);
           break;
         case 'arrowright':
         case 'l':
-          // skip(5);
+          skip(5);
           break;
         case 'c':
           // toggleCaptions();
@@ -160,13 +247,21 @@ function VideoPlayer() {
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      timelineContainerRef.current.removeEventListener("mousemove", handleTimelineUpdate);
+      timelineContainerRef.current.removeEventListener("mousedown", toggleScrubbing);
+      document.removeEventListener("mouseup", (e) => {
+        if (isScrubbing) toggleScrubbing(e);
+      });
+      document.removeEventListener("mousemove", (e) => {
+        if (isScrubbing) handleTimelineUpdate(e);
+      });
     };
   }, []);
   return (
     <div ref={videoContainerRef} className={`video-container paused ${theaterMode ? 'theater' : ''}`} data-volume-level="high">
       <img className="thumbnail-img" />
       <div className="video-controls-container">
-        <div className="timeline-container" style={{ "--progress-position": percent }}>
+        <div className="timeline-container" ref={timelineContainerRef} style={{ "--progress-position": percent }}>
           <div className="timeline">
             <div className="thumb-indicator"></div>
           </div>
@@ -195,7 +290,7 @@ function VideoPlayer() {
             <input ref={volumeSliderRef} onChange={volumeInput} className="volume-slider" type="range" min="0" max="1" step="any" />
           </div>
           <div className="duration-container">
-            <div className="current-time">{currentTime ? currentTime: '0:00'}</div>
+            <div className="current-time">{currentTime ? currentTime : '0:00'}</div>
             /
             <div className="total-time">{totalTime ? totalTime : '0:00'}</div>
           </div>
@@ -204,8 +299,8 @@ function VideoPlayer() {
               <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
             </svg>
           </button>
-          <button className="speed-btn wide-btn">
-            1x
+          <button className="speed-btn wide-btn" onClick={changePlaybackSpeed}>
+            {playbackSpeed ? playbackSpeed : '1x'}
           </button>
           <button className="mini-player-btn" onClick={toggleMiniPlayerMode}>
             <svg viewBox="0 0 24 24">
@@ -232,7 +327,7 @@ function VideoPlayer() {
       </div>
       <video ref={videoRef} src="https://millisinaq.az/Content/video/video.mp4" onClick={togglePlay}>
       </video>
-      <svg className="loader" viewBox="25 25 50 50">
+      <svg ref={loaderRef} className="loader" viewBox="25 25 50 50">
         <circle r="20" cy="50" cx="50"></circle>
       </svg>
     </div>
