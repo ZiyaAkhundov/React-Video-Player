@@ -1,17 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../videoPlayer.css'
-function VideoPlayer() {
-  // const [isScrubbing, setisScrubbing] = useState(false);
+function VideoPlayer( src) {
   const [wasPaused, setWasPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [isMuted, setMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState('');
   const [isPaused, setIsPaused] = useState(true);
   const [theaterMode, settheaterMode] = useState(false);
-  const [fullScreen, setFullScreen] = useState(false);
-  const [miniPlayer, setminiPlayer] = useState(false);
   const [percent, setPercent] = useState(0);
   const videoContainerRef = useRef(null);
   const videoRef = useRef(null);
@@ -23,11 +19,9 @@ function VideoPlayer() {
   const toggleFullScreenMode = () => {
     if (!document.fullscreenElement) {
       videoContainerRef.current.requestFullscreen()
-        .then(() => setFullScreen(true))
         .catch((error) => console.error('Error attempting to enable fullscreen:', error));
     } else {
       document.exitFullscreen()
-        .then(() => setFullScreen(false))
         .catch((error) => console.error('Error attempting to exit fullscreen:', error));
     }
   }
@@ -36,11 +30,9 @@ function VideoPlayer() {
   const toggleMiniPlayerMode = () => {
     if (videoContainerRef.current.classList.contains("mini-player")) {
       document.exitPictureInPicture();
-      setminiPlayer(false)
       videoContainerRef.current.classList.remove("mini-player")
     } else {
       videoRef.current.requestPictureInPicture()
-      setminiPlayer(true)
       videoContainerRef.current.classList.add("mini-player")
     }
   }
@@ -254,7 +246,7 @@ function VideoPlayer() {
     };
   }, []);
   return (
-    <div ref={videoContainerRef} className={`video-container paused ${theaterMode ? 'theater' : ''}`} data-volume-level="high">
+    <div ref={videoContainerRef} className={`video-container ${isPaused ? 'paused' : ''} ${theaterMode ? 'theater' : ''}`} data-volume-level="high">
       <img className="thumbnail-img" />
       <div className="video-controls-container">
         <div className="timeline-container" ref={timelineContainerRef} style={{ "--progress-position": percent }}>
@@ -321,7 +313,7 @@ function VideoPlayer() {
           </button>
         </div>
       </div>
-      <video ref={videoRef} src="https://millisinaq.az/Content/video/video.mp4" onClick={togglePlay}>
+      <video ref={videoRef} src={src.src} onClick={togglePlay}>
       </video>
       <svg ref={loaderRef} className="loader" viewBox="25 25 50 50">
         <circle r="20" cy="50" cx="50"></circle>
